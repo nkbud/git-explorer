@@ -115,6 +115,10 @@ async def get_tree_data(
         # Create a simple summary
         summary = f"Repository: {query.slug}\nFiles: {root_node.file_count}\nDirectories: {root_node.dir_count}"
         
+        # Check for empty repository
+        if root_node.file_count == 0 and root_node.dir_count == 0:
+            summary += "\nNote: Repository appears to be empty"
+        
         return JSONResponse(content={
             "success": True,
             "data": json_data,

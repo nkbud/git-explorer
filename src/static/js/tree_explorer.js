@@ -143,6 +143,13 @@ class TreeExplorer {
             
             if (result.success) {
                 this.data = result.data;
+                
+                // Check if repository is empty
+                if (!result.data.children || result.data.children.length === 0) {
+                    this.showError('Repository appears to be empty or has no accessible files');
+                    return;
+                }
+                
                 this.setupTree();
                 this.showRepoInfo(result.repo_info);
                 document.getElementById('controls').classList.remove('hidden');
