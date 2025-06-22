@@ -1,0 +1,262 @@
+{% extends "base.jinja" %}
+{% block title %}Tree Explorer - Interactive Git Repository Visualization{% endblock %}
+
+{% block extra_head %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+/* Tree Explorer Styles */
+.tree-explorer {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.tree-container {
+    border: 3px solid #1f2937;
+    border-radius: 12px;
+    background: #f9fafb;
+    position: relative;
+    height: 600px;
+    overflow: hidden;
+}
+
+.tree-svg {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+.tree-svg:active {
+    cursor: grabbing;
+}
+
+.node {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.node:hover {
+    transform: scale(1.1);
+}
+
+.node-circle {
+    stroke: #1f2937;
+    stroke-width: 2px;
+    transition: all 0.3s ease;
+}
+
+.node-text {
+    font-family: 'Courier New', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+}
+
+.link {
+    fill: none;
+    stroke: #1f2937;
+    stroke-width: 2px;
+    stroke-opacity: 0.6;
+}
+
+.explored {
+    opacity: 1;
+}
+
+.unexplored {
+    opacity: 0.5;
+}
+
+.controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #1f2937;
+    z-index: 10;
+}
+
+.search-box {
+    width: 200px;
+    padding: 8px;
+    border: 2px solid #1f2937;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.size-controls {
+    margin-bottom: 10px;
+}
+
+.size-controls label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.size-slider {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #1f2937;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.info-panel {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #1f2937;
+    max-width: 300px;
+    z-index: 10;
+}
+
+.hidden {
+    display: none;
+}
+
+.error-message {
+    color: #dc2626;
+    background: #fef2f2;
+    border: 2px solid #dc2626;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tree-explorer">
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">🎮 Interactive Git Tree Explorer</h1>
+        <p class="text-gray-600 text-lg max-w-3xl">
+            Enter a GitHub repository URL to explore its file structure in an interactive, game-like visualization.
+            Files are colored by type, sized by content, and you can track your exploration progress!
+        </p>
+    </div>
+
+    <!-- Repository Input Form -->
+    <div class="relative mb-8">
+        <div class="w-full h-full absolute inset-0 bg-gray-900 rounded-xl translate-y-2 translate-x-2"></div>
+        <div class="rounded-xl relative z-20 pl-8 pr-8 py-6 border-[3px] border-gray-900 bg-[#fff4da]">
+            <form id="treeForm" class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <input 
+                        type="text" 
+                        id="repoUrl" 
+                        name="repo_url"
+                        placeholder="https://github.com/username/repository"
+                        class="w-full px-4 py-3 border-[3px] border-gray-900 rounded-lg text-lg font-medium focus:outline-none"
+                        required
+                    >
+                </div>
+                <div class="flex-shrink-0">
+                    <input 
+                        type="text" 
+                        id="githubToken" 
+                        name="token"
+                        placeholder="GitHub Token (optional)"
+                        class="w-full md:w-64 px-4 py-3 border-[3px] border-gray-900 rounded-lg text-sm"
+                    >
+                </div>
+                <button 
+                    type="submit" 
+                    id="exploreBtn"
+                    class="bg-[#5CF1A4] hover:bg-[#4de394] px-6 py-3 border-[3px] border-gray-900 rounded-lg font-bold text-gray-900 transition-colors"
+                >
+                    🚀 Explore Repository
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tree Visualization Container -->
+    <div class="relative">
+        <div class="w-full h-full absolute inset-0 bg-gray-900 rounded-xl translate-y-2 translate-x-2"></div>
+        <div class="tree-container relative z-20">
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p class="text-center mt-2 font-bold">Cloning repository...</p>
+            </div>
+            
+            <svg id="treeSvg" class="tree-svg"></svg>
+            
+            <!-- Controls Panel -->
+            <div class="controls hidden" id="controls">
+                <div class="mb-4">
+                    <input 
+                        type="text" 
+                        id="searchBox" 
+                        placeholder="Search files..."
+                        class="search-box"
+                    >
+                </div>
+                
+                <div class="size-controls">
+                    <label>Font Size Range:</label>
+                    <input type="range" id="minSizeSlider" class="size-slider" min="8" max="32" value="8">
+                    <span id="minSizeValue">8px</span>
+                    <input type="range" id="maxSizeSlider" class="size-slider" min="8" max="32" value="24">
+                    <span id="maxSizeValue">24px</span>
+                </div>
+                
+                <div class="mb-4">
+                    <label>
+                        <input type="radio" name="sizeMode" value="ranked" checked> Ranked Size
+                    </label>
+                    <label>
+                        <input type="radio" name="sizeMode" value="proportional"> Proportional Size
+                    </label>
+                </div>
+                
+                <button id="resetBtn" class="bg-gray-200 px-3 py-1 rounded border border-gray-400 text-sm">
+                    Reset View
+                </button>
+            </div>
+            
+            <!-- Info Panel -->
+            <div class="info-panel hidden" id="infoPanel">
+                <div id="repoInfo">
+                    <h3 class="font-bold mb-2">Repository Info</h3>
+                    <div id="repoDetails"></div>
+                </div>
+                <div id="nodeInfo" class="mt-4 hidden">
+                    <h4 class="font-bold mb-2">Selected Node</h4>
+                    <div id="nodeDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorContainer"></div>
+</div>
+
+<script src="/static/js/tree_explorer.js"></script>
+{% endblock %}
