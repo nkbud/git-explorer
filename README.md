@@ -159,6 +159,76 @@ summary, tree, content = await ingest_async("path/to/directory")
 
 This is because Jupyter notebooks are asynchronous by default.
 
+## 🛠️ Local Development
+
+### Prerequisites
+
+- Python 3.8+ (Python 3.12 recommended)
+- Git (required for repository cloning)
+- Node.js (optional, for frontend development)
+
+### Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/cyclotruc/gitingest.git
+   cd gitingest
+   ```
+
+2. **Create and activate a virtual environment:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   pip install -r requirements-dev.txt  # For development tools
+   ```
+
+4. **Set up environment variables (optional):**
+   ```bash
+   # Create a .env file for local configuration
+   echo "GITHUB_TOKEN=your_github_token_here" > .env
+   echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> .env
+   ```
+
+### Running the Development Server
+
+Start the FastAPI development server:
+
+```bash
+# From the project root directory
+python -m uvicorn server.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The application will be available at:
+- **Main interface:** `http://localhost:8000`
+- **Tree Explorer:** `http://localhost:8000/tree-explorer`
+- **API Documentation:** `http://localhost:8000/api`
+- **Health Check:** `http://localhost:8000/health`
+
+### Development Tools
+
+- **Linting:** `black . && pylint src/`
+- **Testing:** `pytest tests/`
+- **Pre-commit hooks:** `pre-commit install && pre-commit run --all-files`
+
+### Features Available in Development
+
+1. **Web Interface:** Browse and analyze repositories through the web UI
+2. **Tree Explorer:** Interactive D3.js visualization of repository structure
+3. **CLI Tool:** Use `gitingest` command for local analysis
+4. **API Endpoints:** RESTful API for programmatic access
+
+### Troubleshooting
+
+- **Port already in use:** Change the port: `--port 8001`
+- **Rate limiting issues:** Increase limits in `server/server_utils.py`
+- **Static files not loading:** Ensure you're running from the project root
+- **Repository cloning fails:** Check your GitHub token and network connectivity
+
 ## 🐳 Self-host
 
 1. Build the image:
