@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from server.routers import download, dynamic, index
+from server.routers import download, dynamic, index, tree_explorer
 from server.server_config import templates
 from server.server_utils import lifespan, limiter, rate_limit_exception_handler
 
@@ -107,4 +107,5 @@ async def robots() -> FileResponse:
 # Include routers for modular endpoints
 app.include_router(index)
 app.include_router(download)
+app.include_router(tree_explorer)
 app.include_router(dynamic)
